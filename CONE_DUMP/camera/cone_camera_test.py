@@ -51,7 +51,7 @@ print("[INFO] Camera ready.")
 
 # download model from: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API#run-network-in-opencv
 print("[INFO] Loading model...")
-PATH_TO_CKPT = "../ssd_mobilenet_v2_coco_2018_03_29/frozen_inference_graph.pb"
+PATH_TO_CKPT = "../models/ssd_mobilenet_v1/frozen_inference_graph.pb"
 
 # Load the Tensorflow model into memory.
 detection_graph = tf.Graph()
@@ -164,7 +164,7 @@ with tf.Session(graph=detection_graph) as sess:
 
 
                 # motor control only if area of the object is in between two values
-                if(area > 200 and area < 2500):
+                if(area > 300 and area < 1000):
                     p1 = (left, top)
                     p2 = (right, bottom)
                     r,g,b = cv_utils.predominant_rgb_color(
@@ -223,7 +223,9 @@ with tf.Session(graph=detection_graph) as sess:
 
             if right_cone is None:
                 right_cone = ((FRAME_WIDTH, FRAME_HEIGHT/2), None)
-            
+            if left_cone is not None and left_cone[1] =="ORANGE":
+                left_cone = ((0,FRAME_HEIGHT/2), None)
+
             #  middle of two objects
             _mid = (left_cone[0][0]+right_cone[0][0])/2
 
@@ -258,11 +260,11 @@ with tf.Session(graph=detection_graph) as sess:
 
         cv2.putText(frame,f"SPEED: {SPEED}", (FRAME_WIDTH-250, FRAME_HEIGHT-50),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
         cv2.putText(frame,f"DIRECTION: {DIRECTION}", (FRAME_WIDTH-250,FRAME_HEIGHT-20),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
-        cv2.putText(frame,f"MID: {_mid}", (FRAME_WIDTH-250,FRAME_HEIGHT-100),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA) 
-        
-
-        cv2.line(frame, (int(_mid), 0), (int(_mid), FRAME_HEIGHT), (100,200,200), LINE_THICKNESS) 
-
+        try:
+            cv2.putText(frame,f"MID: {_mid}", (FRAME_WIDTH-250,FRAME_HEIGHT-100),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA) 
+            cv2.line(frame, (int(_mid), 0), (int(_mid), FRAME_HEIGHT), (100,200,200), LINE_THICKNESS) 
+        except:
+            continue
         cv2.imshow('RealSense', frame)
         t = cv2.waitKey(1)
         if t == ord('q'):

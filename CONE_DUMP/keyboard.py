@@ -5,7 +5,7 @@ import pygame
 pygame.init()
 pygame.display.set_mode()
 pygame.key.set_repeat()
-ser = serial.Serial('/dev/ttyACM0', 19200, timeout=0.2)
+ser = serial.Serial('/dev/ttyACM0', 19200, timeout=1)
 ser.flush()	
 SPEED = 0
 DIRECTION= 30

@@ -13,7 +13,8 @@ from utils import cv_utils
 from utils import operations as ops
 from utils import tf_utils
 
-ser = serial.Serial('/dev/ttyACM0', 19200, timeout=0.2)
+
+ser = serial.Serial('/dev/ttyACM0', 19200, timeout=0.3)
 
 strInput = "show ver"
 ser.flush()
@@ -81,37 +82,38 @@ def distance(x1, x2, y1, y2):
 SPEED = 0
 DIRECTION= 30
 
-# input to arduino 
-def writeArduiono():
-    while True:
-        if DIRECTION == 0 or DIRECTION == 90:
-            ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
-
-            # print(ACTION)
-            ser.write(ACTION)
-            line = ser.readline().decode('utf-8').rstrip()	
-        else:
-            ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
-
-            # print(ACTION)
-            ser.write(ACTION)
-            line = ser.readline().decode('utf-8').rstrip()	
-            # print(line)
-
-
-# start motor thread for individual process
-motorThread = t.Thread(target = writeArduiono, daemon=True)
-motorThread.start()
-hasStarted = False
-
 detection_graph = tf_utils.load_model(PATH_TO_CKPT)
 
 #  camera
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
+
+hasStarted = False
+# input to arduino 
+def writeArduiono():
+    while True:
+        if hasStarted:
+            if DIRECTION == 0 or DIRECTION == 90:
+                ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
+                ser.write(ACTION)
+                line = ser.readline().decode('utf-8').rstrip()	
+                print(line)
+                time.sleep(0.2)
+            else:
+                ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
+                ser.write(ACTION)
+                line = ser.readline().decode('utf-8').rstrip()	
+                print(line)
+            print("Has started")
+
+# start motor thread for individual process
+motorThread = t.Thread(target = writeArduiono, daemon=True)
+motorThread.start()
+
 with tf.Session(graph=detection_graph) as sess:
     while True:
+        hasStarted = True
         # frames = pipeline.wait_for_frames()
         # color_frame = frames.get_color_frame()
 
@@ -164,7 +166,7 @@ with tf.Session(graph=detection_graph) as sess:
         left_cone = None
         
         for box, score in zip(boxes, boxes_scores):
-            if score > 0.2:
+            if score > 0.01:
                 left = int(box[1])
                 top = int(box[0])
                 right = int(box[3])
@@ -181,7 +183,7 @@ with tf.Session(graph=detection_graph) as sess:
 
 
                 # motor control only if area of the object is in between two values
-                if(area > 200 and area < 2500):
+                if(area > 300 and area < 1000):
                     p1 = (left, top)
                     p2 = (right, bottom)
                     r,g,b = cv_utils.predominant_rgb_color(
@@ -234,37 +236,59 @@ with tf.Session(graph=detection_graph) as sess:
 
             CENTER_X = (int(FRAME_WIDTH/2))
 
-            if(detected):
-                LINE_COLOR = (0,0,255)
-            else:
-                LINE_COLOR = (0,255,0)
             
             if left_cone is None:
-                left_cone = (0,FRAME_HEIGHT/2)
-
+                left_cone = ((0,FRAME_HEIGHT/2), None)
+                
             if right_cone is None:
-                right_cone = (FRAME_WIDTH, FRAME_HEIGHT/2)
-            
-            #  middle of two objects
-            _mid = (left_cone[0]+right_cone[0])/2
-            if(OVERRIDE == False):
-                if((_mid < CENTER_X and _mid > LEFT_START_POINT[0])):   
-                    DIRECTION = 60
-                elif((_mid > CENTER_X and _mid < RIGHT_START_POINT[0]) or left_cone[1] == "ORANGE"):
-                    DIRECTION = 0
+                right_cone = ((FRAME_WIDTH, FRAME_HEIGHT/2), None)
+
+            if left_cone[1] is not None and left_cone[1] =="ORANGE":
+                if right_cone[1] is None or (right_cone[1] is not None and right_cone[1] =="ORANGE"):
+                    right_cone = ((0, FRAME_HEIGHT/2), None)
                 else:
-                    DIRECTION = 30
+                    left_cone = ((0,FRAME_HEIGHT/2), None)
+            #  middle of two objects
+            _mid = (left_cone[0][0]+right_cone[0][0])/2
+
+            if(OVERRIDE == False):
+                # if((_mid < CENTER_X and _mid > LEFT_START_POINT[0])):   
+                #     DIRECTION = np.interp(_mid,[320,510],[30,60])
+                #     # DIRECTION = 60
+                # elif((_mid > CENTER_X and _mid < RIGHT_START_POINT[0]) or left_cone[1] == "ORANGE"):
+                #     DIRECTION = np.interp(_mid,[125,320],[0,30])
+                # else:
+                #     DIRECTION = 30
+                DIRECTION = int(np.interp(_mid,[125,510],[60,0]))
                 SPEED = 10
             else:
                 SPEED = 0
                 DIRECTION = 30
+
+        if(detected):
+            LINE_COLOR = (0,0,255)
+        else:
+            LINE_COLOR = (0,255,0)
+        # print(LINE_COLOR)
         cv2.circle(frame, (int(FRAME_WIDTH/2), int(FRAME_HEIGHT/2)), 20, (255,255,0), 2)
         cv2.line(frame, LEFT_START_POINT, LEFT_END_POINT, LINE_COLOR, LINE_THICKNESS) 
         cv2.line(frame, RIGHT_START_POINT, RIGHT_END_POINT, LINE_COLOR, LINE_THICKNESS) 
         cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-        cv2.putText(frame,f"Overide State: {OVERRIDE}", (10,30),  cv2.FONT_HERSHEY_SIMPLEX,  
-                        1, (255,0,0), 2, cv2.LINE_AA) 
 
+        # debugging text
+        cv2.putText(frame,f"Overide State: {OVERRIDE}", (10,30),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
+        cv2.putText(frame,f"Detected: {detected}", (10,60),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
+        
+        cv2.putText(frame,f"Left Cone: {left_cone}", (10,int(FRAME_HEIGHT/2)-50),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
+        cv2.putText(frame,f"Right Cone: {right_cone}", (10,int(FRAME_HEIGHT/2)-20),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
+
+        cv2.putText(frame,f"SPEED: {SPEED}", (FRAME_WIDTH-250, FRAME_HEIGHT-50),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
+        cv2.putText(frame,f"DIRECTION: {DIRECTION}", (FRAME_WIDTH-250,FRAME_HEIGHT-20),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
+        try:
+            cv2.putText(frame,f"MID: {_mid}", (FRAME_WIDTH-250,FRAME_HEIGHT-100),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA) 
+            cv2.line(frame, (int(_mid), 0), (int(_mid), FRAME_HEIGHT), (100,200,200), LINE_THICKNESS) 
+        except:
+            continue
         cv2.imshow('RealSense', frame)
         t = cv2.waitKey(1)
         if t == ord('q'):

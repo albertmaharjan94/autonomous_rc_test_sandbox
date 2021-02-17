@@ -49,7 +49,7 @@ print("[INFO] Camera ready.")
 
 # download model from: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API#run-network-in-opencv
 print("[INFO] Loading model...")
-PATH_TO_CKPT = "frozen_inference_graph.pb"
+PATH_TO_CKPT = "./models/ssd_mobilenet_v1/frozen_inference_graph.pb"
 
 # Load the Tensorflow model into memory.
 detection_graph = tf.Graph()
