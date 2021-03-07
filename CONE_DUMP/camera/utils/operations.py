@@ -26,8 +26,11 @@ def extract_crops(img, crop_height, crop_width, step_vertical=None, step_horizon
              original image.
 
     """
-
-    img_height, img_width = img.shape[:2]
+    try:
+        img_height, img_width = img.shape[:2]
+    except:
+        img_width = 640
+        img_height =  480
     crop_height = min(crop_height, img_height)
     crop_width = min(crop_width, img_width)
 

@@ -13,10 +13,10 @@ def load_model(path_to_frozen_graph):
         tf.Graph: a TensorFlow frozen graph.
 
     """
-    detection_graph = tf.Graph()
+    detection_graph = tf.compat.v1.Graph()
     with detection_graph.as_default():
-        od_graph_def = tf.GraphDef()
-        with tf.gfile.GFile(path_to_frozen_graph, 'rb') as fid:
+        od_graph_def = tf.compat.v1.GraphDef()
+        with tf.compat.v1.gfile.GFile(path_to_frozen_graph, 'rb') as fid:
             serialized_graph = fid.read()
             od_graph_def.ParseFromString(serialized_graph)
             tf.import_graph_def(od_graph_def, name='')
@@ -42,15 +42,15 @@ def run_inference_for_batch(batch, session):
             An ndarray of shape (n_images, max_detections)
 
     """
-    ops = tf.get_default_graph().get_operations()
+    ops = tf.compat.v1.get_default_graph().get_operations()
     all_tensor_names = {output.name for op in ops for output in op.outputs}
     tensor_dict = {}
     for key in ['num_detections', 'detection_scores', 'detection_boxes']:
         tensor_name = key + ':0'
         if tensor_name in all_tensor_names:
-            tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(tensor_name)
+            tensor_dict[key] = tf.compat.v1.get_default_graph().get_tensor_by_name(tensor_name)
 
-    image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
+    image_tensor = tf.compat.v1.get_default_graph().get_tensor_by_name('image_tensor:0')
     # Run inference
     output_dict = session.run(tensor_dict, feed_dict={image_tensor: batch})
     # all outputs are float32 numpy arrays, so convert types as appropriate

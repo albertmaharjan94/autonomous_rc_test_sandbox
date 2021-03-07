@@ -44,7 +44,6 @@ LINE_THICKNESS = 5
 SCORE_THRESHOLD = 0.5
 NON_MAX_SUPPRESSION_THRESHOLD = 0.5
 
-
 OVERRIDE = True
 # Configure depth and color streams
 
@@ -79,8 +78,12 @@ def distance(x1, x2, y1, y2):
     return math.sqrt( ((x1-x2)**2)+((y1-y2)**2) )
 
 
+#  RC params
 SPEED = 0
 DIRECTION= 30
+MID_ANGLE = 30
+MAX_SPEED = 100
+MIN_SPEED = 5
 
 detection_graph = tf_utils.load_model(PATH_TO_CKPT)
 
@@ -108,7 +111,7 @@ def writeArduiono():
             print("Has started")
 
 # start motor thread for individual process
-motorThread = t.Thread(target = writeArduiono, daemon=True)
+motorThread = t.Thread(target = writeArduiono)
 motorThread.start()
 
 with tf.Session(graph=detection_graph) as sess:
@@ -166,7 +169,7 @@ with tf.Session(graph=detection_graph) as sess:
         left_cone = None
         
         for box, score in zip(boxes, boxes_scores):
-            if score > 0.01:
+            if score > 0.3:
                 left = int(box[1])
                 top = int(box[0])
                 right = int(box[3])
@@ -189,15 +192,15 @@ with tf.Session(graph=detection_graph) as sess:
                     r,g,b = cv_utils.predominant_rgb_color(
                             frame, top, left, bottom, right)
                     _color = None
-                    if(g == 255):
+                    if(g > 200):
                         _color ="GREEN"
                     else:
                         _color = "ORANGE"
 
-
                     if((avg_x  > LEFT_START_POINT[0] and avg_x < RIGHT_START_POINT[0]) 
                         or (avg_y > LEFT_START_POINT[1] and avg_y < RIGHT_START_POINT[1]) ):
                         detected = True
+
                     if(avg_x  < (FRAME_WIDTH/2)):
                         cone = "LEFT"
                     else:
@@ -232,26 +235,23 @@ with tf.Session(graph=detection_graph) as sess:
                         cv2.rectangle(frame, p1, p2, (int(r), int(g), int(b)), 2, 1)
                         cv2.putText(frame, f"{r}, {g}, {b}", p1,  cv2.FONT_HERSHEY_SIMPLEX,  
                             1, (b,g,r), 2, cv2.LINE_AA) 
+
+                    if(cone=="RIGHT" and hasRight == False and _color == "GREEN"):
+                        hasRight = True
+                        right_cone = (((left+left)/2, (top+bottom)/2),_color)
+
+                        cv2.rectangle(frame, p1, p2, (int(r), int(g), int(b)), 2, 1)
+                        cv2.putText(frame, f"{r}, {g}, {b}", p1,  cv2.FONT_HERSHEY_SIMPLEX,  
+                            1, (b,g,r), 2, cv2.LINE_AA) 
                 
 
             CENTER_X = (int(FRAME_WIDTH/2))
-
             
-            if left_cone is None:
-                left_cone = ((0,FRAME_HEIGHT/2), None)
-                
-            if right_cone is None:
-                right_cone = ((FRAME_WIDTH, FRAME_HEIGHT/2), None)
-
-            if left_cone[1] is not None and left_cone[1] =="ORANGE":
-                if right_cone[1] is None or (right_cone[1] is not None and right_cone[1] =="ORANGE"):
-                    right_cone = ((0, FRAME_HEIGHT/2), None)
-                else:
-                    left_cone = ((0,FRAME_HEIGHT/2), None)
             #  middle of two objects
-            _mid = (left_cone[0][0]+right_cone[0][0])/2
+            _mid = mid_from_boundries(left_cone, right_cone)
 
             if(OVERRIDE == False):
+                ## alpha stage of motor and speed control
                 # if((_mid < CENTER_X and _mid > LEFT_START_POINT[0])):   
                 #     DIRECTION = np.interp(_mid,[320,510],[30,60])
                 #     # DIRECTION = 60
@@ -259,8 +259,13 @@ with tf.Session(graph=detection_graph) as sess:
                 #     DIRECTION = np.interp(_mid,[125,320],[0,30])
                 # else:
                 #     DIRECTION = 30
+                # SPEED = 10
+
+                # dynamic direction and speed of motor
                 DIRECTION = int(np.interp(_mid,[125,510],[60,0]))
-                SPEED = 10
+                # middle angle is 30
+                diff_angle = DIRECTION-MID_ANGLE
+                SPEED  = int(np.interp(DIRECTION, [0, MID_ANGLE],[MAX_SPEED,MIN_SPEED]))
             else:
                 SPEED = 0
                 DIRECTION = 30
@@ -300,8 +305,38 @@ with tf.Session(graph=detection_graph) as sess:
                 SPEED = 0
                 print("Overide ON")
             else:
+                SPEED  = int(np.interp(30, [0, MID_ANGLE],[MAX_SPEED,MIN_SPEED]))
                 OVERRIDE = False
                 print("Overdie OFF")
+
+
+# get the middle of 2 boudries
+def mid_from_boundries(left_cone, right_cone):
+    if left_cone is None:
+        left_cone = ((0,FRAME_HEIGHT/2), None)
+        
+    if right_cone is None:
+        right_cone = ((FRAME_WIDTH, FRAME_HEIGHT/2), None)
+
+    if left_cone[1] is not None and left_cone[1] =="ORANGE":
+        if right_cone[1] is None or (right_cone[1] is not None and right_cone[1] =="ORANGE"):
+            right_cone = ((0, FRAME_HEIGHT/2), None)
+        else:
+            left_cone = ((0,FRAME_HEIGHT/2), None)
+    
+    if right_cone[1] is not None and right_cone[1] =="GREEN":
+        if left_cone[1] is None or (left_cone[1] is not None and left_cone[1] =="GREEN"):
+            left_cone = ((FRAME_WIDTH, FRAME_HEIGHT/2), None)
+        else:
+            right_cone = ((FRAME_WIDTH,FRAME_HEIGHT/2), None)
+    #  middle of two objects
+    _mid = (left_cone[0][0]+right_cone[0][0])/2
+    return _mid
+hasStarted = False
+
+cap.release()
+cv2.destroyAllWindows()
+
 print("[INFO] stop streaming ...")
 # pipeline.stop()
 

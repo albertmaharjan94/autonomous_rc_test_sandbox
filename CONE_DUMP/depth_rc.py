@@ -49,7 +49,7 @@ print("[INFO] Camera ready.")
 
 # download model from: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API#run-network-in-opencv
 print("[INFO] Loading model...")
-PATH_TO_CKPT = "./models/ssd_mobilenet_v1/frozen_inference_graph.pb"
+PATH_TO_CKPT = "./models/ssd_mobilenet_v1/frozen_inference_graph.pb "
 
 # Load the Tensorflow model into memory.
 detection_graph = tf.Graph()
@@ -72,30 +72,30 @@ def distance(x1, x2, y1, y2):
 SPEED = 0
 DIRECTION= 30
 
-# input to arduino 
-def writeArduiono():
-    while True:
-        if DIRECTION == 0 or DIRECTION == 90:
-            ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
+# # input to arduino 
+# def writeArduiono():
+#     while True:
+#         if DIRECTION == 0 or DIRECTION == 90:
+#             ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
 
-            print(ACTION)
-            ser.write(ACTION)
-            line = ser.readline().decode('utf-8').rstrip()	
-            print(line)
-            time.sleep(0.2)
-        else:
-            ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
+#             print(ACTION)
+#             ser.write(ACTION)
+#             line = ser.readline().decode('utf-8').rstrip()	
+#             print(line)
+#             time.sleep(0.2)
+#         else:
+#             ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
 
-            print(ACTION)
-            ser.write(ACTION)
-            line = ser.readline().decode('utf-8').rstrip()	
-            print(line)
+#             print(ACTION)
+#             ser.write(ACTION)
+#             line = ser.readline().decode('utf-8').rstrip()	
+#             print(line)
 
 
-# start motor thread for individual process
-motorThread = t.Thread(target = writeArduiono, daemon=True)
-motorThread.start()
-hasStarted = False
+# # start motor thread for individual process
+# motorThread = t.Thread(target = writeArduiono, daemon=True)
+# motorThread.start()
+# hasStarted = False
 
 
 # Input tensor is the image
@@ -123,7 +123,7 @@ classes_90 = ["background", "person", "bicycle", "car", "motorcycle",
             "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "unknown", "dining table",
             "unknown", "unknown", "toilet", "unknown", "tv", "laptop", "mouse", "remote", "keyboard",
             "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "unknown",
-            "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush" ] 
+            "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush", "cone" ] 
 
 #  camera
 cap = cv2.VideoCapture(0)

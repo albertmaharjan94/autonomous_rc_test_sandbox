@@ -26,9 +26,9 @@ while True:
             pygame.quit(); #sys.exit() if sys is imported
         if event.type == pygame.KEYDOWN:
             if event.key == ord('w'):
-                SPEED = 10
+                SPEED = 50
             elif event.key == ord('s'):
-                SPEED = -10
+                SPEED = -50
             if event.key == ord('a'):
                 DIRECTION = 60
             elif event.key == ord('d'):
