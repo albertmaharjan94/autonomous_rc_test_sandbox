@@ -13,10 +13,10 @@ from utils import cv_utils
 from utils import operations as ops
 from utils import tf_utils
 
-# ser = serial.Serial('/dev/ttyACM0', 19200, timeout=0.3)
-# strInput = "show ver"
-# ser.flush()
-# ser.write(strInput.encode('utf-8')+b'\n')
+ser = serial.Serial('/dev/ttyACM0', 19200, timeout=0.3)
+strInput = "show ver"
+ser.flush()
+ser.write(strInput.encode('utf-8')+b'\n')
 
 
 CAR_STATE = ["CLOCK","STRAIGHT"]
