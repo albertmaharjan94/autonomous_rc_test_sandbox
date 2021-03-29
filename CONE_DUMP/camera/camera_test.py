@@ -80,7 +80,7 @@ print("[INFO] Camera ready.")
 # download model from: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API#run-network-in-opencv
 print("[INFO] Loading model...")
 CONE_CKPT = "./frozen_inference_graph.pb"
-RCNN_CKPT = "./faster_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
+RCNN_CKPT = "./ssd_mobilenet_v2_coco_2018_03_29/frozen_inference_graph.pb"
 
 # Load the Tensorflow model into memory.
 detection_graph = tf.Graph()
@@ -103,11 +103,7 @@ with rcnn_graph.as_default():
 
 # coordinate distance
 def distance(x1, x2, y1, y2):
-    # width =math.sqrt( ((xmin-ymin)**2)+((xmax-ymin)**2) )
-    # height = math.sqrt( ((xmax-ymin)**2)+((xmax-ymax)**2) )
-    # area = int((width * height)/100)
     return math.sqrt( ((x1-x2)**2)+((y1-y2)**2) )
-
 
 #  RC params
 SPEED = 0
@@ -145,8 +141,6 @@ def writeArduiono():
 # start motor thread for individual process
 motorThread = t.Thread(target = writeArduiono)
 motorThread.start()
-
-
 
 # get the middle of 2 boudries
 def mid_from_boundries_clock(left_cone, right_cone):
@@ -236,10 +230,11 @@ def convert_image(i):
     M = float("{:.2f}".format(M))
     return colorized
 
-
+cap = cv2.VideoCapture(6)
 with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as session_rcnn:
     while True:
 
+        _, camera = cap.read()
         hasStarted = True
         if CAR_STATE[1] == "STRAIGHT":
             frames = pipeline.wait_for_frames()
@@ -255,11 +250,6 @@ with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as s
         
         # Convert images to numpy arrays
         color_image = np.asanyarray(frame.get_data())
-
-        
-
-        # if not ir_frame_1 or not ir_frame_2 or depth_frame or not frame:
-        #     continue
 
         # Convert images to numpy arrays
 
@@ -280,7 +270,7 @@ with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as s
         scaled_size = (frame.width, frame.height)
         # expand image dimensions to have shape: [1, None, None, 3]
         # i.e. a single-column array, where each item in the column has the pixel RGB value
-        image_expanded = np.expand_dims(color_image, axis=0)
+        image_expanded = np.expand_dims(camera, axis=0)
 
         frame = np.asanyarray(frame.get_data())
 
@@ -316,19 +306,7 @@ with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as s
                     # r, g, b = colors_hash[class_]
                     cv2.rectangle(frame, p1, p2, (int(r), int(g), int(b)), 2, 1)
                     cv2.putText(frame, classes_90[class_], p1,  cv2.FONT_HERSHEY_SIMPLEX,  
-                        1, (255,0,0), 2, cv2.LINE_AA) 
-
-
-                    # cv2.putText(frame, zDepth, p2,  cv2.FONT_HERSHEY_SIMPLEX,  
-                    #         1, (255,0,0), 2, cv2.LINE_AA) 
-
-                    
-
-                    
-
-
-
-
+                        1, (255,0,0), 2, cv2.LINE_AA)                
 
         with detection_graph.as_default():
             crops, crops_coordinates = ops.extract_crops(
@@ -360,7 +338,6 @@ with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as s
             detected = False
             hasLeft = False
             hasRight = False
-            
 
             right_cone = None
             left_cone = None
@@ -381,7 +358,6 @@ with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as s
                     height = distance(left, right, top, bottom)                
                     area = int((width * height)/100)
 
-
                     # motor control only if area of the object is in between two values
                     if CAR_STATE[1] == "STRAIGHT":
                         min_a = 300
@@ -394,7 +370,6 @@ with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as s
                         p1 = (left, top)
                         p2 = (right, bottom)
 
-
                         r,g,b = cv_utils.predominant_rgb_color(
                                 frame, top, left, bottom, right)
                         _color = None
@@ -402,8 +377,6 @@ with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as s
                             _color ="GREEN"
                         else:
                             _color = "ORANGE"
-
-                        # dominant_color = cv_utils.predominant_rgb_color(cv2.cvtColor(frame[top:bottom, left:right], cv2.COLOR_BGR2HSV))
 
                         if((avg_x  > LEFT_START_POINT[0] and avg_x < RIGHT_START_POINT[0]) 
                             or (avg_y > LEFT_START_POINT[1] and avg_y < RIGHT_START_POINT[1]) ):
@@ -451,7 +424,6 @@ with tf.Session(graph=detection_graph) as sess,tf.Session(graph=rcnn_graph) as s
                             cv2.rectangle(frame, p1, p2, (int(r), int(g), int(b)), 2, 1)
                             cv2.putText(frame, f"{r}, {g}, {b}", p1,  cv2.FONT_HERSHEY_SIMPLEX,  
                                 1, (b,g,r), 2, cv2.LINE_AA) 
-                    
 
                 CENTER_X = (int(FRAME_WIDTH/2))
                 if CAR_STATE[0] == "CLOCK":
@@ -562,9 +534,5 @@ hasStarted = False
 print("[INFO] stop streaming ...")
 cap.release()
 cv2.destroyAllWindows()
-
 print("[INFO] closing thread ...")
-motorThread.join()
-# pipeline.stop()
 raise SystemExit
-
