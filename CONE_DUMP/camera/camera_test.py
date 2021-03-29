@@ -126,25 +126,25 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
 hasStarted = False
 # input to arduino 
-# def writeArduiono():
-#     while True:
-#         if hasStarted:
-#             if DIRECTION == 0 or DIRECTION == 90:
-#                 ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
-#                 ser.write(ACTION)
-#                 line = ser.readline().decode('utf-8').rstrip()	
-#                 print(line)
-#                 time.sleep(0.2)
-#             else:
-#                 ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
-#                 ser.write(ACTION)
-#                 line = ser.readline().decode('utf-8').rstrip()	
-#                 print(line)
-#             print("Has started")
+def writeArduiono():
+    while True:
+        if hasStarted:
+            if DIRECTION == 0 or DIRECTION == 90:
+                ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
+                ser.write(ACTION)
+                line = ser.readline().decode('utf-8').rstrip()	
+                print(line)
+                time.sleep(0.2)
+            else:
+                ACTION = (str(DIRECTION)+"#" +str(SPEED)+ "\n").encode('utf_8')
+                ser.write(ACTION)
+                line = ser.readline().decode('utf-8').rstrip()	
+                print(line)
+            print("Has started")
 
-# # start motor thread for individual process
-# motorThread = t.Thread(target = writeArduiono)
-# motorThread.start()
+# start motor thread for individual process
+motorThread = t.Thread(target = writeArduiono)
+motorThread.start()
 
 
 
